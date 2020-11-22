@@ -1,50 +1,73 @@
 import sys
 import json
-from json import JSONEncoder
-import xml.etree.ElementTree as ET
+import xml.etree.cElementTree as ET
+from json import JSONDecodeError
+from xml.dom import minidom
 
 
-
-class Room(JSONEncoder):
-
-    def __init__(self, id: int, name: str, students_list: list):
-        self.id = id
-        self.name = name
-        self.students_list = students_list
-
-
-def main():
-    students = "students.json"
-    rooms = "rooms.json"
-    output = 'xml'
-    # students, rooms, output = args[1:]
-    data_students = json.loads(open(students, 'r', encoding='utf-8').read())
-    data_rooms = json.loads(open(rooms, 'r', encoding='utf-8').read())
-    dict = {}
-    for student in data_students:
-        if dict.get(student['room']) is None:
-            dict[student['room']] = [student]
-        else:
-            dict[student['room']].append(student)
-    result = []
-    for room in data_rooms:
-        result.append(Room(room['id'], room['name'], dict[room['id']]))
-    with open('result.json','w') as res:
-        json.dump(result,res,default=lambda x: x.__dict__)
+def xmltree_create(new_list):
     root = ET.Element('Rooms')
-    for r in result:
-        room = ET.SubElement(root,r.name)
-        ET.SubElement(room, 'id').text = str(r.id)
-        ET.SubElement(room, 'Students')
-    tree = ET.ElementTree(root)
-    with open('result.xml', 'w') as res2:
-        tree.write('result.xml')
+    for item in new_list:
+        room = ET.SubElement(root, f"Room{item['id']}")
+        ET.SubElement(room, 'id').text = str(item['id'])
+        ET.SubElement(room, 'name').text = item['name']
+        stud = ET.SubElement(room, 'Students')
+        for _ in item['students']:
+            ET.SubElement(stud, 'name').text = _['name']
+            ET.SubElement(stud, 'room').text = str(_['room'])
+            ET.SubElement(stud, 'id').text = str(_['id'])
+    return root
 
 
+def concat_with(data_students, data_rooms):
+    for student in data_students:
+        if data_rooms[student['room']].get('students') is None:
+            data_rooms[student['room']]['students'] = [student]
+        else:
+            data_rooms[student['room']]['students'].append(student)
+    return data_rooms
 
 
+class Parser:
+    def serialized_to(self):
+        raise NotImplementedError
+
+    def deserialization(self):
+        raise NotImplementedError
 
 
-main()
+class JSONParser(Parser):
+    def serialized_to(self, data):
+        with open('result.json', 'w') as res:
+            json.dump(data, res, indent=4, default=lambda x: x.__dict__)
 
-# main(sys.argv)
+    def deserialization(self, file: str):
+        return json.loads(open(file, 'r', encoding='utf-8').read()) 
+
+
+class XMLParser(Parser):
+    def serialized_to(self, root):
+        with open('result.xml', 'w') as res2:
+            xmlstr = minidom.parseString(ET.tostring(root)).toprettyxml(indent="   ")
+            res2.write(xmlstr)
+
+
+def main(args:[]):
+    students, rooms, format_ = args[1:]
+    json_parser = JSONParser()
+    try:
+        data_students = json_parser.deserialization(students)
+        data_rooms = json_parser.deserialization(rooms)
+    except JSONDecodeError:
+        print('File is empty')
+        return
+    new_list = concat_with(data_students, data_rooms)
+    if format_.lower() == 'json':
+        json_parser.serialized_to(new_list)
+    elif format_.lower() == 'xml':
+        xml_parser = XMLParser()
+        root = xmltree_create(new_list)
+        xml_parser.serialized_to(root)
+
+
+main(sys.argv)
