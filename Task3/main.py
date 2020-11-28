@@ -1,30 +1,17 @@
-from threading import Thread, Lock
-
-a = 0
-lock = Lock()
+from concurrent.futures.thread import ThreadPoolExecutor
 
 
-def function(arg):
-    global a
-    lock.acquire()
-    for _ in range(arg):
-        # we can call lock.acquire() and lock.release() inside the loop, but calling this functions
-        # is much more consuming than incrementing a variable, so in this specific situation much suitable to cover
-        # in mutex whole loop.
-        # lock.acquire()
+def function(args):
+    a = 0
+    for _ in range(args):
         a += 1
-        # lock.release()
-    lock.release()
+    return a
 
 
 def main():
-    threads = []
-    for i in range(5):
-        thread = Thread(target=function, args=(1000000,))
-        thread.start()
-        threads.append(thread)
-    [t.join() for t in threads]
-    print("----------------------", a)
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        var = executor.map(function, [1000000] * 5)
+        print("----------------------", sum(var))
 
 
 main()
