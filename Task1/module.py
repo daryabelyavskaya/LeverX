@@ -1,3 +1,4 @@
+import argparse
 import xml.etree.cElementTree as ET
 
 
@@ -22,3 +23,11 @@ def xmltree_create(new_list):
             ET.SubElement(stud, 'room').text = str(_['room'])
             ET.SubElement(stud, 'id').text = str(_['id'])
     return root
+
+
+def arguments_parse(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('students', help='File with students', default='None')
+    parser.add_argument('rooms', help='File with rooms', default='None')
+    parser.add_argument('format', help='Output format', default='None')
+    return parser.parse_args()

@@ -1,17 +1,14 @@
-import argparse
 import json
 import sys
+import xml.etree.cElementTree as ET
 from json import JSONDecodeError
 from xml.dom import minidom
 
-from module import concat_with, xmltree_create
+from module import concat_with, xmltree_create, arguments_parse
 
 
 class Parser:
     def serialized_to(self):
-        raise NotImplementedError
-
-    def deserialization(self):
         raise NotImplementedError
 
 
@@ -31,10 +28,9 @@ class XMLParser(Parser):
             res2.write(xmlstr)
 
 
-def main(args):
-    parser = argparse.ArgumentParser()
-    parser.add_argument(students='students.json',rooms='rooms.json',format_='')
-    students, rooms, format_ = args[1:]
+def main(args: list):
+    args = arguments_parse(args)
+    students, rooms, format_ = args.students, args.room, args.format
     json_parser = JSONParser()
     try:
         data_students = json_parser.deserialization(students)
